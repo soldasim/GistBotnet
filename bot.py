@@ -4,8 +4,7 @@ import time
 import utils
 from utils import Command
 
-CONTROLLER_IP = '1.1.1.1'
-SLEEP = 360  # 6 minutes
+REFRESH_DELAY = 360  # 6 minutes
 
 ID = 0
 LOG = []
@@ -53,7 +52,8 @@ def send_file():
 
 
 if __name__ == "__main__":
-    ID = random.randint(1, sys.maxsize)  
+    ID = random.randint(1, sys.maxsize)
+    utils.init_config()
 
     while True:
         time.sleep(SLEEP)

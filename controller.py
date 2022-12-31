@@ -49,6 +49,8 @@ def handle_input(args):
 
 
 if __name__ == "__main__":
+    utils.init_config()
+
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=[
             'heartbeat', 'hb',

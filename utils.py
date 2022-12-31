@@ -1,9 +1,11 @@
 import os
 import re
+import json
 from enum import Enum
 
-GIT_TOKEN = "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"
-
+CONTROLLER_IP = ""
+GIT_API_TOKEN = ""
+GIST_ID = ""
 
 class Command(Enum):
     NONE = 0
@@ -11,13 +13,23 @@ class Command(Enum):
     SEND_FILE = 2
 
 
+def init_config():
+    file = open('config.json')
+    config = json.load(file)
+
+    global GIT_API_TOKEN, GIST_ID, CONTROLLER_IP
+    GIT_API_TOKEN = config['GIT_API_TOKEN']
+    GIST_ID = config['GIST_ID']
+    CONTROLLER_IP = config['CONTROLLER_IP']
+
+
 def curl_post_gist_comment(msg):
     cmd = "curl \
             -X POST \
             -H 'Accept: application/vnd.github+json' \
-            -H 'Authorization: Bearer " + GIT_TOKEN + "' \
+            -H 'Authorization: Bearer " + GIT_API_TOKEN + "' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
-            https://api.github.com/gists/081b69780c34110b4acff6c6ba39bc88/comments \
+            https://api.github.com/gists/" + GIST_ID + "/comments \
             -d '{\"body\":\"" + msg + "\"}' \
         \n"
     cmd = re.sub(' +', ' ', cmd)
