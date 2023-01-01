@@ -31,7 +31,7 @@ def handle_command(cmd, data, r):
         if (data == None):
             out = error(cmd, data, r)
         else:
-            out = send_file(data)
+            out = read_file(data)
 
     log.add_log_entry(SHOW_INFO, LOGFILE, log.CommandAndResponse(cmd, data, r, out))
     if r: return respond(cmd, out, r)
@@ -67,9 +67,13 @@ def check_for_commands():
     return handled
 
 
-def send_file():
-    # TODO
-    return None
+def read_file(filepath):
+    file = open(filepath, 'r')
+    filedata = file.read()
+    file.close()
+
+    data = utils.text_to_base64(filedata)
+    return filepath + '\n' + data
 
 
 def main():
