@@ -8,7 +8,7 @@ INITIALIZED = False
 GIT_API_TOKEN = ''
 GIST_ID = ''
 
-REFRESH_DELAY = 20 # seconds
+REFRESH_DELAY = 20 # seconds  (How often is the communication channel checked for new messages.)
 BROADCAST = 0
 DELIM = '•'
 
@@ -75,11 +75,11 @@ def post_gist_comment(msg):
 
     cmd = "curl\
             -X POST \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'Authorization: Bearer " + GIT_API_TOKEN + "' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -H \"Accept: application/vnd.github+json\" \
+            -H \"Authorization: Bearer " + GIT_API_TOKEN + "\" \
+            -H \"X-GitHub-Api-Version: 2022-11-28\" \
             \"https://api.github.com/gists/" + GIST_ID + "/comments\" \
-            -d '{\"body\":\"" + msg + "\"}' \
+            -d \"{\\\"body\\\":\\\"" + msg + "\\\"}\" \
         \n"
     cmd = re.sub(' +', ' ', cmd)
 
@@ -90,7 +90,10 @@ def post_gist_comment(msg):
 
 def get_last_comment_id():
     _, data = read_last_gist_comments()
-    return data[-1]['id']
+    if data:
+        return data[-1]['id']
+    else:
+        return 0
 
 
 def get_fresh_comments(last_seen):
@@ -103,7 +106,10 @@ def get_fresh_comments(last_seen):
         first_new = i
 
     fresh_comments = data[first_new:]
-    last_seen = data[-1]['id']
+    if data:
+        last_seen = data[-1]['id']
+    else:
+        last_seen = 0
     return fresh_comments, last_seen
 
 
@@ -132,9 +138,9 @@ def read_gist_comments(page=1, per_page=100, url=None):
         url = "https://api.github.com/gists/" + GIST_ID + "/comments?per_page=" + str(per_page) + "&page=" + str(page)
     
     cmd = "curl -i\
-                -H 'Accept: application/vnd.github+json' \
-                -H 'Authorization: Bearer " + GIT_API_TOKEN + "' \
-                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                -H \"Accept: application/vnd.github+json\" \
+                -H \"Authorization: Bearer " + GIT_API_TOKEN + "\" \
+                -H \"X-GitHub-Api-Version: 2022-11-28\" \
                 \"" + url + "\" \
             \n"
     cmd = re.sub(' +', ' ', cmd)
@@ -142,8 +148,11 @@ def read_gist_comments(page=1, per_page=100, url=None):
     response = perform_command(cmd)
     print()
 
-    headers, body = response.split('\n\n')
-    return headers, json.loads(body)
+    s = response.find('\n\n')
+    headers, body = response[:s], response[s+2:]
+    data = json.loads(body)
+    if type(data) is not list: data = []
+    return headers, data
 
 
 def parse_http_headers(headers):

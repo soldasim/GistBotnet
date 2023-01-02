@@ -55,7 +55,7 @@ class CommandAndResponse(LogEntry):
             + "  cmd: " + self.cmd.name + '\n' \
             + "  data: \"" + self.data + '\"\n' \
             + "  r: " + str(self.r) + '\n' \
-            + "  out: " + self.out + '\n'
+            + "  out: \"" + self.out + '\"\n'
 
 
 class AliveBots(LogEntry):

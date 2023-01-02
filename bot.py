@@ -5,7 +5,6 @@ import time
 import utils
 from utils import Command
 import log
-import stegano
 
 SHOW_INFO = True
 LOGFILE = '.botlog'
@@ -49,6 +48,7 @@ def respond(cmd, out, r):
 
 def check_for_commands():
     global LAST_COMMENT
+    
     messages, LAST_COMMENT = utils.get_fresh_messages(LAST_COMMENT)
     log.add_log_entry(SHOW_INFO, LOGFILE, log.CheckForCommands(len(messages)))
     
@@ -71,6 +71,7 @@ def read_file(filepath):
 
 def main():
     global LAST_COMMENT
+
     LAST_COMMENT = utils.get_last_comment_id()
     log.add_log_entry(SHOW_INFO, LOGFILE, log.InitEntry(LAST_COMMENT))
 

