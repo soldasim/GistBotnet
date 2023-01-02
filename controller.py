@@ -43,7 +43,8 @@ def check_bots():
     tick_bots()
 
     for msg in messages:
-        isctrl, bot, cmd, d, r = utils.parse_message(msg)
+        ok, isctrl, bot, cmd, d, r = utils.parse_message(msg)
+        if not ok: continue
         if isctrl: continue
         
         ALIVE_BOTS[bot] = BOT_TTL

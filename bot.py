@@ -14,6 +14,7 @@ BOT_ID = 0
 LAST_COMMENT = 0
 
 
+# TODO: better error message
 def error(cmd, data, r):
     return "ERROR"
 
@@ -23,16 +24,18 @@ def handle_command(cmd, data, r):
         out = ""
 
     elif cmd == Command.CMD:
-        if (data == None):
-            out = error(cmd, data, r)
-        else:
+        try:
+            assert data
             out = utils.perform_command(data)
+        except:
+            out = error(cmd, data, r)
 
     elif cmd == Command.SEND_FILE:
-        if (data == None):
-            out = error(cmd, data, r)
-        else:
+        try:
+            assert data
             out = read_file(data)
+        except:
+            out = error(cmd, data, r)
 
     log.add_log_entry(SHOW_INFO, LOGFILE, log.CommandAndResponse(cmd, data, r, out))
     if r: return respond(cmd, out, r)
@@ -51,7 +54,8 @@ def check_for_commands():
     
     handled = 0
     for msg in messages:
-        isctrl, bot, cmd, d, r = utils.parse_message(msg)
+        ok, isctrl, bot, cmd, d, r = utils.parse_message(msg)
+        if not ok: continue
         if isctrl and (bot == utils.BROADCAST or bot == BOT_ID):
             handle_command(cmd, d, r)
             handled += 1
