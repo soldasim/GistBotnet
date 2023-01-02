@@ -66,9 +66,7 @@ def read_file(filepath):
     file = open(filepath, 'r')
     filedata = file.read()
     file.close()
-
-    data = stegano.text_to_base64(filedata)
-    return filepath + '\n' + data
+    return filepath + '\n' + filedata
 
 
 def main():

