@@ -37,7 +37,7 @@ The following process takes place to steganize each message:
 
 This process ensures that the message does not look suspicous or bot-generated at the first glance and the encoded secret message is hidden in the link (which still works) and thus not immidiately suspicious.
 
-Here is an example of how the communication channel can look: https://gist.github.com/Sheld5/d52ec4473ceeb711bf234f1e41ebc06a
+Here is an example of how the communication channel can look: https://gist.github.com/soldasim/d52ec4473ceeb711bf234f1e41ebc06a
 
 ## Basic Usage
 
